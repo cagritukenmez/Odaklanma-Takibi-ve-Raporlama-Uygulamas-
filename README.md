@@ -1,1 +1,1 @@
-# Odaklanma-Takibi-ve-Raporlama-Uygulamas-
+# Odaklanma Takibi ve Raporlama Mobil Uygulaması
