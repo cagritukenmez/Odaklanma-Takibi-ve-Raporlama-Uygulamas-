@@ -1,6 +1,7 @@
 import { Picker } from "@react-native-picker/picker";
 import React, { useEffect, useState } from "react";
-import { Button, Modal, Pressable, StyleSheet, Text, View } from "react-native";
+
+import { AppState, Button, Modal, Pressable, StyleSheet, Text, View } from "react-native";
 
 type SessionSummary = {
   category: string;
@@ -16,6 +17,7 @@ export default function HomeScreen() {
   const [sessionSummary, setSessionSummary] = useState<SessionSummary | null>(null);
   const [modalVisible, setModalVisible] = useState<boolean>(false);
   const [hasStartedBefore, setHasStartedBefore] = useState<boolean>(false);
+  const [distractionCount, setDistractionCount] = useState<number>(0);
 
 
   // Sayaç akışı
@@ -36,16 +38,37 @@ export default function HomeScreen() {
       if (interval) clearInterval(interval);
     };
   }, [isRunning, seconds]);
+  useEffect(() => {
+    const subscription = AppState.addEventListener("change", (nextState) => {
+    
+      // Uygulama arka plana giderse
+      if (nextState === "background" && isRunning) {
+        setIsRunning(false);               // Sayaç duraklasın
+        setDistractionCount((prev) => prev + 1);   // Dikkat dağınıklığı +1
+     }
+
+      // Kullanıcı uygulamaya geri döndü (active)
+      if (nextState === "active") {
+        // Burada popup sorabiliriz: "Devam etmek ister misin?"
+        // Şimdilik sadece duraklamış şekilde bekliyoruz.
+      }
+    });
+
+    return () => subscription.remove();
+  }, [isRunning]);
+
+
+
 
   // Seans bitince özet oluştur
   const finishSession = () => {
     setIsRunning(false);
 
     const summary: SessionSummary = {
-      category: selectedCategory,
-      duration: formatTime(25 * 60 - seconds),
-      distractions: 0, // AppState eklenince güncellenecek
-    };
+    category: selectedCategory,
+    duration: formatTime(25 * 60 - seconds),
+    distractions: distractionCount,
+  };
 
     setSessionSummary(summary);
   };
@@ -74,6 +97,7 @@ export default function HomeScreen() {
     setIsRunning(false);
     setHasStartedBefore(false);
     setSeconds(25 * 60);
+    setDistractionCount(0);
   };
 
   // Süre formatı
