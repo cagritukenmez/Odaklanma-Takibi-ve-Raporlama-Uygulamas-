@@ -1,5 +1,7 @@
 import { Picker } from "@react-native-picker/picker";
-import React, { useEffect, useState } from "react";
+
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import React, { useEffect, useRef, useState } from "react";
 
 import { AppState, Button, Modal, Pressable, StyleSheet, Text, View } from "react-native";
 
@@ -18,7 +20,9 @@ export default function HomeScreen() {
   const [modalVisible, setModalVisible] = useState<boolean>(false);
   const [hasStartedBefore, setHasStartedBefore] = useState<boolean>(false);
   const [distractionCount, setDistractionCount] = useState<number>(0);
-
+  const distractionCountRef = useRef(distractionCount);
+  const secondsRef = useRef(seconds);
+  const selectedCategoryRef = useRef(selectedCategory);
 
   // Sayaç akışı
   useEffect(() => {
@@ -32,44 +36,65 @@ export default function HomeScreen() {
 
     if (seconds === 0 && isRunning) {
       finishSession();
+      handlePause();
     }
 
     return () => {
       if (interval) clearInterval(interval);
     };
   }, [isRunning, seconds]);
+
   useEffect(() => {
     const subscription = AppState.addEventListener("change", (nextState) => {
-    
-      // Uygulama arka plana giderse
-      if (nextState === "background" && isRunning) {
-        setIsRunning(false);               // Sayaç duraklasın
-        setDistractionCount((prev) => prev + 1);   // Dikkat dağınıklığı +1
-     }
-
-      // Kullanıcı uygulamaya geri döndü (active)
-      if (nextState === "active") {
-        // Burada popup sorabiliriz: "Devam etmek ister misin?"
-        // Şimdilik sadece duraklamış şekilde bekliyoruz.
+      if (nextState === "background" && hasStartedBefore) {
+        // Güncel değerleri kullan
+        const newDistractionCount = distractionCountRef.current + 1;
+        setDistractionCount(newDistractionCount);
+      
+        // Güncel değerlerle özet oluştur
+        const summary: SessionSummary = {
+          category: selectedCategoryRef.current,
+          duration: formatTime(25 * 60 - secondsRef.current),
+          distractions: newDistractionCount,
+        };
+      
+        setIsRunning(false);
+        setSessionSummary(summary);
+        setModalVisible(true);
       }
     });
-
     return () => subscription.remove();
-  }, [isRunning]);
+  }, [hasStartedBefore]);
 
+  useEffect(() => {
+    distractionCountRef.current = distractionCount;
+    secondsRef.current = seconds;
+    selectedCategoryRef.current = selectedCategory;
+  }, [distractionCount, seconds, selectedCategory]);
 
-
-
-  // Seans bitince özet oluştur
-  const finishSession = () => {
-    setIsRunning(false);
-
-    const summary: SessionSummary = {
-    category: selectedCategory,
-    duration: formatTime(25 * 60 - seconds),
-    distractions: distractionCount,
+  const saveSession = async (summuary: SessionSummary) =>{
+    try{
+      const stored = await AsyncStorage.getItem("sessions");
+      const sessions = stored ? JSON.parse(stored) : [];
+      sessions.push({
+        ...summuary,
+        date: new Date().toISOString()
+      });
+      await AsyncStorage.setItem("sessions", JSON.stringify(sessions));
+    }catch(error){
+      console.log("Seans kaydedilirken hata oluştur: ",error);
+    }
   };
 
+  // Seans bitince özet oluştur
+  const finishSession =  () => {
+    setIsRunning(false);
+    
+    const summary: SessionSummary = {
+      category: selectedCategory,
+      duration: formatTime(25 * 60 - seconds),
+      distractions: distractionCount,
+    };
     setSessionSummary(summary);
   };
 
@@ -80,16 +105,11 @@ export default function HomeScreen() {
   }
 
   // Duraklat
-  const handlePause = () => {
-    setIsRunning(false);
-
-    const summary: SessionSummary = {
-      category: selectedCategory,
-      duration: formatTime(25 * 60 - seconds),
-      distractions: 0,
-    };
-
-    setSessionSummary(summary);
+  const handlePause =  () => {
+    if(isRunning){
+      setIsRunning(false);
+    }
+    setModalVisible(true);
   };
 
   // Sıfırla
