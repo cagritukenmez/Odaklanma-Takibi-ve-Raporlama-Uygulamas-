@@ -12,7 +12,7 @@ type SessionSummary = {
 };
 
 export default function HomeScreen() {
-  //states
+  //durumlar
   const [seconds, setSeconds] = useState<number>(25 * 60); // Default 25 dk
   const [isRunning, setIsRunning] = useState<boolean>(false);
   const [selectedCategory, setSelectedCategory] = useState<string>("Ders Çalışma");
@@ -20,6 +20,7 @@ export default function HomeScreen() {
   const [modalVisible, setModalVisible] = useState<boolean>(false);
   const [hasStartedBefore, setHasStartedBefore] = useState<boolean>(false);
   const [distractionCount, setDistractionCount] = useState<number>(0);
+  //güncel durum değerleri için referanslar
   const distractionCountRef = useRef(distractionCount);
   const secondsRef = useRef(seconds);
   const selectedCategoryRef = useRef(selectedCategory);
@@ -60,6 +61,7 @@ export default function HomeScreen() {
       
         setIsRunning(false);
         setSessionSummary(summary);
+        saveSession(summary);
         setModalVisible(true);
       }
     });
@@ -87,7 +89,7 @@ export default function HomeScreen() {
   };
 
   // Seans bitince özet oluştur
-  const finishSession =  () => {
+  const finishSession =  async () => {
     setIsRunning(false);
     
     const summary: SessionSummary = {
@@ -95,6 +97,7 @@ export default function HomeScreen() {
       duration: formatTime(25 * 60 - seconds),
       distractions: distractionCount,
     };
+    await saveSession(summary);
     setSessionSummary(summary);
   };
 
@@ -105,10 +108,17 @@ export default function HomeScreen() {
   }
 
   // Duraklat
-  const handlePause =  () => {
+  const handlePause = async () => {
     if(isRunning){
       setIsRunning(false);
     }
+    const summary: SessionSummary = {
+      category: selectedCategory,
+      duration: formatTime(25 * 60 - seconds),
+      distractions: distractionCount,
+    };
+    await saveSession(summary);
+    setSessionSummary(summary);
     setModalVisible(true);
   };
 
