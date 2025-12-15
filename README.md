@@ -28,15 +28,3 @@ Bu proje, dijital dikkat dağınıklığı ile mücadele etmek için tasarlanmı
   - **Son 7 gün odaklanma süreleri (Bar Chart)**
   - **Kategori dağılımı (Pie Chart)**
 
-## Proje Yapısı
-
-Uygulama Expo Router ile dosya tabanlı yönlendirme kullanır.
-
-```text
-app/
-  _layout.tsx            # Root stack (tabs + modal)
-  modal.tsx              # Modal route (örnek ekran)
-  (tabs)/
-    _layout.tsx          # Bottom Tabs
-    index.tsx            # Zamanlayıcı ekranı
-    reports.tsx          # Dashboard + grafikler
